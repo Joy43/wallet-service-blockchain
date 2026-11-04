@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS auth_audit_log;
+DROP TABLE IF EXISTS users;

@@ -1,0 +1,22 @@
+// gRPC contract for synchronous token validation between services.
+// Other services call ValidateToken on every protected request.
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/yourorg/wallet-service/gen/auth/v1;authv1";
+
+service AuthService {
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  string user_id = 1;
+  string role = 2;
+  string session_id = 3;
+  int64 expires_at_unix = 4;
+}

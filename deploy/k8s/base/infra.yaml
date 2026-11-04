@@ -1,0 +1,106 @@
+# In-cluster Postgres / Redis / NATS for dev & staging.
+# In production prefer managed services (RDS, ElastiCache, a NATS cluster) and drop this file.
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: platform }
+spec:
+  clusterIP: None
+  selector: { app: postgres }
+  ports: [{ name: pg, port: 5432 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: postgres, namespace: platform }
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata: { labels: { app: postgres } }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports: [{ containerPort: 5432 }]
+          env:
+            - { name: POSTGRES_USER, value: auth }
+            - { name: POSTGRES_DB, value: auth }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: app-secrets, key: POSTGRES_PASSWORD } }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "auth"] }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+          volumeMounts: [{ name: data, mountPath: /var/lib/postgresql/data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: 5Gi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: redis, namespace: platform }
+spec:
+  selector: { app: redis }
+  ports: [{ name: redis, port: 6379 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: redis, namespace: platform }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis } }
+  template:
+    metadata: { labels: { app: redis } }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          # Sessions are cache-like: losing them only forces users to log in again.
+          args: ["--save", "", "--appendonly", "no"]
+          ports: [{ containerPort: 6379 }]
+          readinessProbe:
+            exec: { command: ["redis-cli", "ping"] }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: nats, namespace: platform }
+spec:
+  selector: { app: nats }
+  ports: [{ name: client, port: 4222 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: { name: nats, namespace: platform }
+spec:
+  serviceName: nats
+  replicas: 1
+  selector: { matchLabels: { app: nats } }
+  template:
+    metadata: { labels: { app: nats } }
+    spec:
+      containers:
+        - name: nats
+          image: nats:2.10-alpine
+          args: ["-js", "-sd", "/data"]   # JetStream with file storage
+          ports: [{ containerPort: 4222 }]
+          readinessProbe:
+            tcpSocket: { port: 4222 }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts: [{ name: data, mountPath: /data }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: 2Gi } }

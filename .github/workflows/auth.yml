@@ -1,0 +1,50 @@
+name: auth-service
+
+on:
+  pull_request:
+    paths: ["services/auth/**", "gen/**", "proto/**", "buf.yaml", "buf.gen.yaml", ".github/workflows/auth.yml"]
+  push:
+    branches: [main]
+    paths: ["services/auth/**", "gen/**", "proto/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/auth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: services/auth/go.mod
+          cache-dependency-path: services/auth/go.sum
+      - run: go vet ./...
+      - run: go test -race -cover ./...
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
+
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: bufbuild/buf-setup-action@v1
+      - uses: bufbuild/buf-lint-action@v1
+      # Fails the PR if the gRPC contract changes in a way that would break other services.
+      - uses: bufbuild/buf-breaking-action@v1
+        if: github.event_name == 'pull_request'
+        with:
+          against: "https://github.com/${{ github.repository }}.git#branch=main"
+
+  image:
+    runs-on: ubuntu-latest
+    needs: [test, proto]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (tagged with the commit SHA, never :latest)
+        run: docker build -f services/auth/Dockerfile -t auth-service:${{ github.sha }} .

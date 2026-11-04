@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: Auth service
+  version: 1.0.0
+  description: |
+    Login returns an access token (JWT, short-lived) and a refresh token.
+    Click **Authorize** and paste the access token to call protected routes.
+servers:
+  - url: http://localhost:8081
+    description: auth-service
+tags:
+  - name: auth
+  - name: ops
+paths:
+  /.well-known/jwks.json:
+    get:
+      tags: [auth]
+      summary: Public keys for verifying access tokens (JWKS)
+      description: |
+        Other services fetch this (and cache it) to verify the EdDSA signature of access tokens
+        locally, without calling auth-service on every request. Contains public keys only.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        kty: { type: string, example: OKP }
+                        crv: { type: string, example: Ed25519 }
+                        alg: { type: string, example: EdDSA }
+                        use: { type: string, example: sig }
+                        kid: { type: string }
+                        x: { type: string }
+  /v1/auth/register:
+    post:
+      tags: [auth]
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Log in and get a token pair
+      description: Rate limited per email. Unknown email and wrong password return the same 401.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate the refresh token
+      description: |
+        The old refresh token stops working. Replaying an already-used refresh
+        token revokes the whole session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenPair" }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: End the current session
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Logged out }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      summary: Current user profile (cached in Redis)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "401": { $ref: "#/components/responses/Error" }
+  /healthz:
+    get:
+      tags: [ops]
+      summary: Liveness
+      responses:
+        "200": { description: Process is up }
+  /readyz:
+    get:
+      tags: [ops]
+      summary: Readiness (dependencies reachable)
+      responses:
+        "200": { description: Ready }
+        "503": { description: Not ready }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          enum: [INVALID_ARGUMENT, NOT_FOUND, CONFLICT, UNAUTHENTICATED, FORBIDDEN, RATE_LIMITED, UNAVAILABLE, INTERNAL]
+        message: { type: string }
+        service: { type: string }
+        request_id: { type: string }
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8, maxLength: 72 }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [user, admin] }
+        created_at: { type: string, format: date-time }
+    TokenPair:
+      type: object
+      properties:
+        token_type: { type: string, example: Bearer }
+        access_token: { type: string }
+        access_expires_at: { type: string, format: date-time }
+        refresh_token: { type: string }
+        refresh_expires_at: { type: string, format: date-time }
