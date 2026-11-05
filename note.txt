@@ -1,1 +1,8 @@
 https://appetizers.io/en/blog/golang-microservices-architecture/
+
+http://localhost:8081/docs	Swagger UI, ekhan theke register/login test korte parben
+http://localhost:8081/healthz	Khali page, status 200 mane process jibito
+http://localhost:8081/readyz	200 mane Postgres, Redis, NATS sob connected
+http://localhost:8081/.well-known/jwks.json	Public key (JSON)
+http://localhost:8081/metrics	Prometheus metrics
+http://localhost:8081/openapi.yaml	API spec file
