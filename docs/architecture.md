@@ -9,6 +9,7 @@ Fill this in as services are added.
 | auth | implemented (`services/auth`) | users, sessions |
 | wallet | planned (`services/wallet`) | balances, ledger, transfers |
 | notification | planned (`services/notification`) | email / SMS delivery |
+| chain | planned (`services/chain`) | blockchain keys and Hedera access (the only service allowed to hold them) |
 | gateway | planned (`services/gateway`) | edge routing |
 
 ## How services talk
@@ -22,6 +23,9 @@ be refused immediately (moving money), call gRPC `ValidateToken` instead. See `d
 
 ## Events
 Contract and delivery guarantees: `docs/events.md`. `user.registered` goes through a transactional outbox.
+
+## Secrets
+Each service has its own git-ignored `.env` (placeholders in `.env.example`). Blockchain keys live only in `services/chain`.
 
 ## Rules
 - Each service owns its database. No cross-service database access.

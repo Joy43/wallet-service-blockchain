@@ -1,3 +1,6 @@
 bin/
+
+# Secrets: never commit. Placeholders go in .env.example instead.
 .env
-gen/
+.env.*
+!.env.example

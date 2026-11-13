@@ -74,7 +74,7 @@ docs/                   architecture, events, decisions (ADRs), runbooks
 
 ```bash
 make test                 # unit tests (race detector on)
-make run                  # needs .env (see .env.example) and Postgres, Redis, NATS
+make run                  # needs services/auth/.env (copy services/auth/.env.example) and Postgres, Redis, NATS
 make proto                # regenerate gen/ (buf + protoc-gen-go + protoc-gen-go-grpc)
 make k8s-image && make k8s-secret && make k8s-apply     # Kubernetes (namespace "platform")
 ```

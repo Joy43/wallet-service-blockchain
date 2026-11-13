@@ -11,7 +11,7 @@ tidy:
 	cd $(AUTH) && go mod tidy
 
 run:
-	set -a; . ./.env; set +a; cd $(AUTH) && go run ./cmd/auth
+	cd $(AUTH) && set -a && . ./.env && set +a && go run ./cmd/auth
 
 test:
 	cd $(AUTH) && go test -race -cover ./...

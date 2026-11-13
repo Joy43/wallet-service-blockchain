@@ -1,0 +1,4 @@
+github.com/hiero-ledger/hiero-sdk-go/v2 v2.85.1 h1:D59pvi5JVSaQGp9TRWJCgBX09FA47EMTWNXAhmZ8cjE=
+github.com/hiero-ledger/hiero-sdk-go/v2 v2.85.1/go.mod h1:zJXr+le0c0qYfd3cbh2wrT+YuzZePjk6lMDoiBJ2nw4=
+github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
+github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=

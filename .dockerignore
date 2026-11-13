@@ -1,4 +1,9 @@
 .git
 bin/
 *.md
-.env
+
+# Secrets must never enter an image: any .env at any depth
+**/.env
+**/.env.*
+!**/.env.example
+**/._*
